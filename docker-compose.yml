@@ -1,0 +1,63 @@
+version: '3.8'
+
+services:
+  mongodb:
+    image: mongo:latest
+    container_name: reality-filter-mongodb
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: password
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+    networks:
+      - reality-filter-network
+
+  redis:
+    image: redis:latest
+    container_name: reality-filter-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - reality-filter-network
+    command: redis-server --appendonly yes
+
+  postgres:
+    image: postgres:latest
+    container_name: reality-filter-postgres
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: reality_filter
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - reality-filter-network
+
+  # Optional: Add pgAdmin for PostgreSQL management
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: reality-filter-pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@realityfilter.com
+      PGADMIN_DEFAULT_PASSWORD: password
+    ports:
+      - "5050:80"
+    networks:
+      - reality-filter-network
+    depends_on:
+      - postgres
+
+volumes:
+  mongodb_data:
+  redis_data:
+  postgres_data:
+
+networks:
+  reality-filter-network:
+    driver: bridge 

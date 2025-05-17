@@ -1,0 +1,402 @@
+openapi: 3.0.0
+info:
+  title: Reality Filter API
+  description: API for analyzing and fact-checking news articles
+  version: 1.0.0
+  contact:
+    name: Reality Filter Team
+
+servers:
+  - url: http://localhost:8080/api/v1
+    description: Local development server
+
+paths:
+  /articles:
+    post:
+      summary: Create a new article
+      description: Submit a new article for analysis
+      tags:
+        - Articles
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateArticleRequest'
+      responses:
+        '201':
+          description: Article created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateArticleResponse'
+        '400':
+          description: Invalid request payload
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /articles/{id}:
+    get:
+      summary: Get article details
+      description: Retrieve details of a specific article
+      tags:
+        - Articles
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Article ID
+      responses:
+        '200':
+          description: Article details retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Article'
+        '404':
+          description: Article not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /articles/{id}/analyze:
+    post:
+      summary: Analyze an article
+      description: Trigger analysis of an existing article
+      tags:
+        - Analysis
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Article ID
+      responses:
+        '200':
+          description: Analysis completed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AnalysisResponse'
+        '404':
+          description: Article not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Analysis failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /articles/{id}/analysis:
+    get:
+      summary: Get analysis results
+      description: Retrieve analysis results for an article
+      tags:
+        - Analysis
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Article ID
+      responses:
+        '200':
+          description: Analysis results retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AnalysisResult'
+        '404':
+          description: Analysis results not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /articles/{id}/reprocess:
+    post:
+      summary: Reprocess an article
+      description: Trigger reanalysis of an existing article
+      tags:
+        - Analysis
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Article ID
+      responses:
+        '202':
+          description: Reprocessing request accepted
+        '500':
+          description: Reprocessing request failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /articles/flagged:
+    get:
+      summary: List flagged articles
+      description: Retrieve a list of articles that have been flagged during analysis
+      tags:
+        - Articles
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 10
+            minimum: 1
+            maximum: 100
+          description: Maximum number of articles to return
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+            minimum: 0
+          description: Number of articles to skip
+      responses:
+        '200':
+          description: Flagged articles retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FlaggedArticlesResponse'
+        '400':
+          description: Invalid query parameters
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+components:
+  schemas:
+    CreateArticleRequest:
+      type: object
+      required:
+        - title
+        - content
+        - source
+        - author
+      properties:
+        title:
+          type: string
+          description: Article title
+        content:
+          type: string
+          description: Article content
+        source:
+          type: string
+          description: Source of the article
+        author:
+          type: string
+          description: Author of the article
+        tags:
+          type: array
+          items:
+            type: string
+          description: List of tags associated with the article
+
+    CreateArticleResponse:
+      type: object
+      properties:
+        articleId:
+          type: string
+          description: Unique identifier of the created article
+        status:
+          $ref: '#/components/schemas/ArticleStatus'
+
+    Article:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Unique identifier of the article
+        title:
+          type: string
+          description: Article title
+        content:
+          type: string
+          description: Article content
+        source:
+          type: string
+          description: Source of the article
+        author:
+          type: string
+          description: Author of the article
+        tags:
+          type: array
+          items:
+            type: string
+          description: List of tags
+        status:
+          $ref: '#/components/schemas/ArticleStatus'
+        createdAt:
+          type: string
+          format: date-time
+          description: Creation timestamp
+        updatedAt:
+          type: string
+          format: date-time
+          description: Last update timestamp
+
+    AnalysisResponse:
+      type: object
+      properties:
+        articleId:
+          type: string
+          description: Article ID
+        score:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 1
+          description: Credibility score
+        flags:
+          type: array
+          items:
+            $ref: '#/components/schemas/Flag'
+        status:
+          $ref: '#/components/schemas/ArticleStatus'
+
+    AnalysisResult:
+      type: object
+      properties:
+        articleId:
+          type: string
+          description: Article ID
+        score:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 1
+          description: Credibility score
+        flags:
+          type: array
+          items:
+            $ref: '#/components/schemas/Flag'
+        status:
+          $ref: '#/components/schemas/ArticleStatus'
+        metadata:
+          $ref: '#/components/schemas/ArticleMetadata'
+
+    Flag:
+      type: object
+      properties:
+        type:
+          type: string
+          enum:
+            - BIAS
+            - FACTUAL_ERROR
+            - MISLEADING
+            - UNVERIFIED
+            - OPINION
+          description: Type of flag
+        confidence:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 1
+          description: Confidence score of the flag
+        details:
+          type: string
+          description: Detailed explanation of the flag
+        source:
+          type: string
+          description: Component that generated the flag
+
+    ArticleMetadata:
+      type: object
+      properties:
+        entities:
+          type: array
+          items:
+            $ref: '#/components/schemas/Entity'
+        sentiment:
+          type: number
+          format: float
+          minimum: -1
+          maximum: 1
+          description: Sentiment score
+        language:
+          type: string
+          description: Detected language
+        wordCount:
+          type: integer
+          description: Number of words in the article
+        readingTime:
+          type: integer
+          description: Estimated reading time in minutes
+
+    Entity:
+      type: object
+      properties:
+        name:
+          type: string
+          description: Entity name
+        type:
+          type: string
+          description: Entity type (e.g., PERSON, ORGANIZATION, LOCATION)
+        confidence:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 1
+          description: Entity detection confidence
+
+    ArticleStatus:
+      type: string
+      enum:
+        - PENDING
+        - ANALYZING
+        - ANALYZED
+        - FLAGGED
+        - ERROR
+      description: Current status of the article
+
+    FlaggedArticlesResponse:
+      type: object
+      properties:
+        articles:
+          type: array
+          items:
+            $ref: '#/components/schemas/Article'
+        limit:
+          type: integer
+          description: Number of articles returned
+        offset:
+          type: integer
+          description: Offset used in the query
+
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+          description: Error message 
